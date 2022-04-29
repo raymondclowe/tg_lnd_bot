@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-
-# An empty telegram bot as a template
-#
-# long polling with concurrent.futures so it isn't blocking
+# may need python3.8 for this to work
 
 
 from json import JSONDecodeError
@@ -13,7 +10,7 @@ import requests
 
 import concurrent.futures
 
-import alarm_memory
+import memory
 
 import secrets
 

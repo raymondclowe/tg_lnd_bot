@@ -136,3 +136,6 @@ alarm-memory.json
 # history folder
 .history
 settings.json
+
+# environment
+.venv3.8
