@@ -10,7 +10,7 @@ import requests
 
 import concurrent.futures
 
-import memory
+import memoryModule
 
 import secrets
 
@@ -66,16 +66,35 @@ class TelegramBot:
         response = self.session.post(self.api_url + 'sendMessage', params = params)
         return response.status_code == 200
 
+# generator that returns spinner characters
+def spinner_generator():
+    while True:
+        for c in ['|', '/', '-', '\\']:
+            yield c
+
+def check_channel(check):
+    if check is None:
+        return
+
+    if check['check_type'] == 'node':
+        pass
+    elif check['check_type'] == 'channel':
+        pass
+
+    pass
+
 # if this is __main__ 
 if __name__ == "__main__":
     # create telegram bot object
-    bot = TelegramBot()
+    tgBot = TelegramBot()
 
-    memory = alarm_memory.AlarmMemory()
+    memory = memoryModule.memoryClass()
 
     executor = concurrent.futures.ThreadPoolExecutor(max_workers = 10)
 
-    future_update = executor.submit(bot.get_next_update)
+    update_future = executor.submit(tgBot.get_next_update)
+
+    spinner = spinner_generator()
 
     print("Bot started, press Ctrl+C to exit")
     try:    
@@ -83,24 +102,15 @@ if __name__ == "__main__":
         while True:
             # wait one second
             sleep(1)
-            print(". ", end = "", flush=True)
-
-            # current time as epoch time
-            current_time = int(round(time.time()))
-            # load all the timers from memory
-            due_alarms = memory.due_alarms(current_time)
-            for timer in due_alarms:
-                # send a message to the user
-                for user_id in timer['user_ids']:
-                    bot.send_message(user_id, "Your alarm is due!")
-                # bot.send_message(timer['user_id'], "Your alarm is due")
-                # delete the timer from memory
-                memory.delete_alarm_by_time(current_time)
+            # print next spinner on the same line overlapping
+            print(next(spinner), end = '\r')
+            
+            check_channel(next(memory.nextCheck()))
                
             # if there is an update
-            if future_update.done():
+            if update_future.done():
                 # get the update
-                update = future_update.result()
+                update = update_future.result()
                 # if the update is a message
                 if 'message' in update:
                     # get the message
@@ -111,80 +121,49 @@ if __name__ == "__main__":
                     except KeyError:
                         username = first_name
                     try:
-                        text = update['message']['text']
+                        text = update['message']['text'].lower()
                     except KeyError:
                         text = ""
-                    if text == "/set3minutetimer":
-                        text = "set 3 minute timer"
-                    if text.lower().startswith("set") or text.lower().startswith("start"):
-                        # natural language process to get the duration from the text
-                        # parse the text, find the number
-                        # split the lower case text into words using spaces or dashes
-                        
-                        words = text.lower().replace("-"," ").split()
 
-                        # find how many words are numbers
-                        count_of_numbers = 0
-                        number_offset = 0
-                        for i in range (len(words)):
-                            word = words[i]
-                            # if the word is a valid number
-                            if word.isdigit():
-                                count_of_numbers += 1
-                                number_offset = i
-                        
-                        
-                        # if there is only one number, use it as the duration
-                        if count_of_numbers == 1:
-                            duration = int(words[number_offset])
-                        else:
-                            duration = 0
-                            text = '/help'
+                    # if the first character is not a '/' then ignore this
+                    if text[0] != '/':
+                        continue
 
-                        possible_units = ['second', 'seconds', 'minute', 'minutes', 'hour', 'hours', 'day', 'days']
-                        unit_multipiers = [1,1,60,60,3600,3600,86400,86400]
-                        # find the unit
+                    # strip off the initial character
+                    text = text[1:]
 
-                        # convert to seconds
-                        for i in range (len(words)):
-                            word = words[i]
-                            if word in possible_units:
-                                duration = duration * unit_multipiers[possible_units.index(word)] 
-                                break
 
-                        text = "/timer " + str(duration)
-                        
-                        
-                    if text == '/start':
-                        reply = 'Hello {}(@{})! I am a timer bot. Ask me to /timer <seconds> to set a timer'.format(first_name,username)
-                    if text == '/help':
-                        reply = 'Ask me to /timer <seconds> to set a timer. I also understand things like "start a 5 minute timer" or "set a 5 hour timer" or "set a timer for 5 days for me"'
-                    # if text starts with /timer
-                    elif text.startswith('/timer'):
-                        # get the number of seconds
-                        words = text.split(' ')
-                        if len(words) > 1:
-                            seconds = words[1]
-                        
-                            # if the number is a number
-                            if seconds.isdigit():
-                                # calculate the end time and remember it
-                                # current time as epoch time
-                                current_time = int(round(time.time()))
-                                end_time = current_time + int(seconds)
-                                memory.add_alarm(chat_id, end_time)
-                                # calculate the full date time string for the end time
-                                end_time_string = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time))
-                                reply = f'Timer set for {seconds} seconds from now at {end_time_string}'
-                            else:
-                                reply = 'Please enter a number of seconds'
-                        else:
-                            reply = 'Please enter a number of seconds'
+                    if text.startswith("monitor") or text.startswith("check"):
+                        monitorcheck = words[1]
+
+                        words = text.split()
+
+                        if len(words) == 1:
+                            tgBot.send_message(chat_id, f"Please specify a thing to {monitorcheck}")
+                            continue
+
+                        # second word must be "node" or "channel"
+                        if (words[1] not in ["node", "channel"]) or (len(words) != 3):
+                            tgBot.send_message(chat_id, f"Please specify a thing to {monitorcheck}, either node or channel followed by their id")
+                            continue
+
+                        # check that the third word is a reasonable id
+
+                        # construct a check object
+                        thischeck = memoryModule.checkType()
+
+
+
+                    elif text == 'start':
+                        reply = 'Hello {}(@{})! I am a lightning network monitor bot. Say /help for help'.format(first_name,username)
+                    elif text == 'help':
+                        reply = '''Ask me to /monitor [node|channel] <id>. I will monitor the node or channel with the id you specify and let you know if it is down.
+                                    You can also ask me to /check <node|channel> <id> to see the current status.'''
                     else:
                         reply = 'I do not understand you.'
-                    bot.send_message(chat_id, reply)
-                bot.save_offset()
-                future_update = executor.submit(bot.get_next_update)
+                    tgBot.send_message(chat_id, reply)
+                tgBot.save_offset()
+                update_future = executor.submit(tgBot.get_next_update)
     # keyboard break exception
     except KeyboardInterrupt:
         print("\nKeyboard break")        
