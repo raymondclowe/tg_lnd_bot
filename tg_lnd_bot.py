@@ -4,7 +4,9 @@
 
 from json import JSONDecodeError
 from time import sleep
+import string
 import time
+import datetime
 
 import requests
 
@@ -36,6 +38,7 @@ class TelegramBot:
                     f.write(str(self.offset))
         # timeout defaults to 30 and has max 50
         params = {'offset': self.offset + 1, 'limit': 1, 'timeout': 50}
+        print(params)
         try:
             response = self.session.get(self.api_url + 'getUpdates', params = params)
         except:
@@ -132,33 +135,63 @@ if __name__ == "__main__":
                     # strip off the initial character
                     text = text[1:]
 
+                    words = text.split()
+
 
                     if text.startswith("monitor") or text.startswith("check"):
-                        monitorcheck = words[1]
 
-                        words = text.split()
+                        # check if the command is valid
+                        validcommand = True
+                        
+                        # if it is not 3 words then not valid
+                        if len(words) != 3:
+                            validcommand = False
 
-                        if len(words) == 1:
-                            tgBot.send_message(chat_id, f"Please specify a thing to {monitorcheck}")
-                            continue
+                        # if second word not node or channel then not valid
+                        elif words[1] not in ['node','channel']:
+                            validcommand = False
 
-                        # second word must be "node" or "channel"
-                        if (words[1] not in ["node", "channel"]) or (len(words) != 3):
-                            tgBot.send_message(chat_id, f"Please specify a thing to {monitorcheck}, either node or channel followed by their id")
-                            continue
 
-                        # check that the third word is a reasonable id
+                        # if second word node then check that third word is 66 characters hex
+                        elif words[1] == 'node':
+                            if len(words[2]) != 66:
+                                if not all(c in string.hexdigits for c in words[2]):
+                                    validcommand = False
 
-                        # construct a check object
-                        thischeck = memoryModule.checkType()
+                        # if the second word is channel then check that third word is a number
+                        elif words[1] == 'channel':
+                            if not words[2].isdigit():
+                                validcommand = False
+                        
+                        if not validcommand:
+                            reply = f"Invalid command: {text}"
+                        else:
+
+                            # at this point we should have a valid command
+
+                            
+                            check_type = words[1]
+                            check_item = words[2]
+
+
+
+                            # construct a check object
+                            thischeck = memoryModule.checkType(check_type, check_item, chat_id)
+                            thischeck.next_check_due = datetime.datetime.now() + datetime.timedelta(seconds=thischeck.check_interval)
+
+                            # add this check to the memory
+                            memory.add_check(thischeck)
+
+                            reply = f"Adding {thischeck}"
+
 
 
 
                     elif text == 'start':
                         reply = 'Hello {}(@{})! I am a lightning network monitor bot. Say /help for help'.format(first_name,username)
                     elif text == 'help':
-                        reply = '''Ask me to /monitor [node|channel] <id>. I will monitor the node or channel with the id you specify and let you know if it is down.
-                                    You can also ask me to /check <node|channel> <id> to see the current status.'''
+                        reply = '''Ask me to /monitor [node|channel] <id>. I will monitor the node or channel with the id you specify and let you know if it is down. 
+You can also ask me to /check <node|channel> <id> to see the current status.'''
                     else:
                         reply = 'I do not understand you.'
                     tgBot.send_message(chat_id, reply)

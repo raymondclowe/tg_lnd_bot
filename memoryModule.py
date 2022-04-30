@@ -1,24 +1,27 @@
 import json
+from dataclasses import dataclass
+from dataclasses_json import dataclass_json
+
 import datetime
 
 def keystoint(x):
     return {int(k): v for k, v in x.items()}
 
 
-from dataclasses import dataclass
 
 
 
 # define a data structure class called check with an id, a check_type, a user_id and a check_value
+@dataclass_json
 @dataclass
-class checkType:
-    id: int
+class checkType:    
     check_type: str # check_type is either "node" or "channel"
-    user_id: int # tg chat id
-    check_value: str # check_value is either a node or a channel id
-    last_checked: datetime.datetime 
-    next_check_due: datetime.datetime  
-    last_result_ok_at: datetime.datetime
+    check_item: int 
+    user_id: int  # tg chat id  
+    check_value: str = "" # check_value is either a node or a channel id
+    last_checked: datetime.datetime = 0
+    next_check_due: datetime.datetime  = 0
+    last_result_ok_at: datetime.datetime= 0
     last_result: str = ""
     last_result_ok: bool = False
     check_interval: int = (60 * 5)
@@ -28,31 +31,33 @@ class checkType:
 class memoryClass:
     def __init__(self):
         self.memory_filename = "memory.json"
-        self.checks = {}
-        
+        self.data = {'version': 1, 'checks': []}
+                
         self.load_memory()
 
     def load_memory(self):
         try:
             with open(self.memory_filename, 'r') as f:
-                self.channels = json.load(f, object_hook=keystoint)
+                # read whole file into a string s
+                s = f.read()                
+                self = memoryClass.from_json(s)
         except:
             pass
 
     def save_memory(self):
         with open(self.memory_filename, 'w') as f:
-            json.dump(self.channels, f)
+            f.write(self.to_json())
 
     def add_check(self, check):
-        self.checks.append(check)
+        self.data['checks'].append(check)
         self.save_memory()
     
     
     # define a generator that 
     def nextCheck(self):
-        if self.checks:
+        if  self.data['checks']:
             while True:
-                for check in self.checks:
+                for check in  self.data['checks']:
                     yield check
         else:
             yield None
