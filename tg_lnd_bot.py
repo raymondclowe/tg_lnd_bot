@@ -26,10 +26,10 @@ def check(thischeck):
         return thischeck # unchanged
 
     if check['check_type'] == 'node':
-        # 
-        return thischeck, "result of checking node" # updated thischeck if necessary
+        return "result of checking node" 
     elif check['check_type'] == 'channel':
-        pass
+        return "result of checking channel" # 
+        
 
     pass
 
@@ -56,7 +56,7 @@ if __name__ == "__main__":
             # print next spinner on the same line overlapping
             print(next(spinner), end='\r')
 
-            check_channel(next(memory.nextCheck()))
+            # check_channel(next(memory.nextCheck()))
 
             # if there is an update
             if update_future.done():
