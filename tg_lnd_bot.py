@@ -5,7 +5,7 @@
 import concurrent.futures
 import datetime
 import string
-from json import JSONDecodeError
+import json
 from time import sleep
 
 import config
@@ -32,8 +32,17 @@ def doTheCheck(thischeck, tgbot, chat_id):
     if thischeck['check_type'] == 'node':
         # get a list of lnd peers
         # if not on the list then do a lncli connectpeer and keep waiting until the connection happens and a ping time is available, or it timesout after 1 minute
-        peers = lncli_command('listpeers')
-        print(peers)
+        peers_json_string = lncli_command('listpeers')
+        # print(peers)
+        
+        # create dictionary from json string
+        peers_json = json.loads(peers_json_string)
+
+        # loop through peers_json
+        for peer in peers_json['peers']:
+            tgbot.send_message(chat_id, f'checking peer:  {peer["pub_key"]}' ) 
+
+
         # if this node is on the peer list then return  the ping time and last pinged time as strings
         #
         return "result of checking node" 
