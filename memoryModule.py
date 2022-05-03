@@ -23,12 +23,25 @@ class memoryClass:
 
     def save_memory(self):
         with open(self.memory_filename, 'w') as f:
-            f.write(json.dumps(self.data, indent=4))
+            f.write(json.dumps(self.data, indent=4,sort_keys=True, default=str))
 
     def add_check(self, check):
         self.data['checks'].append(check)
         self.save_memory()
-    
+   
+    def update_check(self, check):
+       # loop through all the self.data['checks'] and find one with a matching check_type, check_item and chat_id
+       # if found then update it with the new check
+       # if not found then add it to the list
+        found = False
+        for i in range(len(self.data['checks'])):
+            if self.data['checks'][i]['check_type'] == check['check_type'] and self.data['checks'][i]['check_item'] == check['check_item'] and self.data['checks'][i]['chat_id'] == check['chat_id']:
+                self.data['checks'][i] = check
+                found = True
+                break
+        if not found:
+            self.data['checks'].append(check)
+        self.save_memory()
     
     # define a generator that 
     def nextCheck(self):

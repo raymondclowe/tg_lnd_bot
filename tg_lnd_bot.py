@@ -21,13 +21,19 @@ def spinner_generator():
             yield c
 
 
-def check(thischeck):
+def doTheCheck(thischeck):
     if thischeck is None:
-        return thischeck # unchanged
+        return 'Nothing to check' # unchanged
 
-    if check['check_type'] == 'node':
+    if thischeck['check_type'] == 'node':
+        # get a list of lnd peers
+        # if not on the list then do a lncli connectpeer and keep waiting until the connection happens and a ping time is available, or it timesout after 1 minute
+        lncli_command('listpeers')
+
+        # if this node is on the peer list then return  the ping time and last pinged time as strings
+        #
         return "result of checking node" 
-    elif check['check_type'] == 'channel':
+    elif thischeck['check_type'] == 'channel':
         return "result of checking channel" # 
         
 
@@ -128,11 +134,11 @@ if __name__ == "__main__":
 
                             # if this is for command monitor then add it to the memory otherwise check it now
                             if command_type == 'monitor':
-                                memory.addCheck(thischeck)
+                                memory.add_check(thischeck)
                                 reply = f"Adding {thischeck}"
                             else:
-                                thischeck, reply = check(thischeck)
-                                memory.updateCheck(thischeck)
+                                reply = doTheCheck(thischeck)
+                                memory.update_check(thischeck)
                             
                              
 
