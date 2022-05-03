@@ -15,7 +15,7 @@ import os
 
 
 if os.name == 'nt':
-    lncli_commandLine = "bin\\lncli --tlscertpath certs\\tls.cert --macaroonpath certs\\admin.macaroon --rpcserver 192.168.0.113:10009"
+    lncli_commandLine = "bin\\lncli --tlscertpath C:\\Users\\raymo\\tg_lnd_bot\\certs\\tls.key --macaroonpath C:\\Users\\raymo\\tg_lnd_bot\certs\\readonly.macaroon --rpcserver 192.168.0.113:10009"
 else:
     # check if it is linux and the ~/.lnd directory exists
     if os.path.isdir(os.path.expanduser("~/.lnd")):

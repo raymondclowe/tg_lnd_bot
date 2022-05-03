@@ -6,11 +6,11 @@ from executecommand import runcmd
 from config import lncli_commandLine
 
 def lncli_command(command):
-    getinfo = lncli_commandLine + " getinfo"
-
+    # getinfo = lncli_commandLine + " getinfo"
+    thisCmd = lncli_commandLine + " " + command
     # print(getinfo)
 
-    result, error, errorlevel = runcmd(getinfo)
+    result, error, errorlevel = runcmd(thisCmd)
 
     if error:
         print(error)
