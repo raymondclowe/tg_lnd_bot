@@ -12,6 +12,8 @@ import config
 import memoryModule
 import telegrambotapi
 
+from lnclicommand import lncli_command
+
 # generator that returns spinner characters
 
 
@@ -21,15 +23,17 @@ def spinner_generator():
             yield c
 
 
-def doTheCheck(thischeck):
+def doTheCheck(thischeck, tgbot, chat_id):
     if thischeck is None:
         return 'Nothing to check' # unchanged
+
+    tgbot.send_message(chat_id, 'checking ...')
 
     if thischeck['check_type'] == 'node':
         # get a list of lnd peers
         # if not on the list then do a lncli connectpeer and keep waiting until the connection happens and a ping time is available, or it timesout after 1 minute
-        lncli_command('listpeers')
-
+        peers = lncli_command('listpeers')
+        print(peers)
         # if this node is on the peer list then return  the ping time and last pinged time as strings
         #
         return "result of checking node" 
@@ -84,6 +88,9 @@ if __name__ == "__main__":
 
                     # if the first character is not a '/' then ignore this
                     if text[0] != '/':
+                        tgBot.save_offset()
+                        update_future = executor.submit(tgBot.get_next_update)
+
                         continue
 
                     # strip off the initial character
@@ -137,7 +144,7 @@ if __name__ == "__main__":
                                 memory.add_check(thischeck)
                                 reply = f"Adding {thischeck}"
                             else:
-                                reply = doTheCheck(thischeck)
+                                reply = doTheCheck(thischeck, tgBot, chat_id)
                                 memory.update_check(thischeck)
                             
                              
