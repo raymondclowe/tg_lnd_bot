@@ -21,6 +21,6 @@ else:
     if os.path.isdir(os.path.expanduser("~/.lnd")):
         lncli_commandLine = "lncli "
     else:
-        lncli_commandLine = "/usr/local/bin/lncli --tlscertpath /home/rcl/telegram_lnd_status_bot/tls.cert --macaroonpath readonly.macaroon"
+        lncli_commandLine = "/usr/local/bin/lncli --tlscertpath /home/rcl/tg_lnd_bot/certs/tls.key --macaroonpath /home/rcl/tg_lnd_bot/certs/readonly.macaroon"
 
 DEFAULT_CHECK_INTERVAL_SECONDS = 60

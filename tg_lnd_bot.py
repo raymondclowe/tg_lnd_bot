@@ -165,6 +165,7 @@ if __name__ == "__main__":
 
     # save memory
     memory.save_memory()
-    executor.shutdown(wait=False)
+    # executor.shutdown(wait=False)
+    executor.shutdown(wait=False) 
 
 print('done')
