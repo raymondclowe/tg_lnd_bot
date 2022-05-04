@@ -28,7 +28,10 @@ def lncli_command(command):
 if __name__ == '__main__':
     # if there is a command on the arguement line
     if len(sys.argv) > 1:
-        cmdstring = sys.argv[1]
+        # get the command which is all the remaining arguments
+        cmdstring = " ".join(sys.argv[1:])
+
+        # cmdstring = sys.argv[1]
     else:    # if not, use a default command
         cmdstring = 'getinfo'
     # print(f"executing {cmdstring}")

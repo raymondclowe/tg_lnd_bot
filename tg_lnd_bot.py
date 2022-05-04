@@ -27,22 +27,97 @@ def doTheCheck(thischeck, tgbot, chat_id):
     if thischeck is None:
         return 'Nothing to check' # unchanged
 
-    tgbot.send_message(chat_id, 'checking ...')
+    # tgbot.send_message(chat_id, 'checking ...')
 
     if thischeck['check_type'] == 'node':
         # get a list of lnd peers
         # if not on the list then do a lncli connectpeer and keep waiting until the connection happens and a ping time is available, or it timesout after 1 minute
+        # tgbot.send_message(chat_id, f'Getting list of peers' ) 
         peers_json = lncli_command('listpeers')
         # print(peers)
+
+        if peers_json is None:
+            return 'Error getting list of peers'
        
         # loop through peers_json
         for peer in peers_json['peers']:
-            tgbot.send_message(chat_id, f'checking peer:  {peer["pub_key"]}' ) 
+            # tgbot.send_message(chat_id, f'checking peer:  {peer["pub_key"]}' ) 
+            if peer['pub_key'] == thischeck['check_item']:
+                tgbot.send_message(chat_id, f'node {peer["pub_key"]} is online as a peer' )
+                # found the peer in the list
+                # check if the ping time is available
+                if 'ping_time' in peer:
+                    # ping time is available
+                    tgbot.send_message(chat_id, f'Ping time is {peer["ping_time"]}' ) 
+                if 'flap_count' in peer:
+                    # 
+                    tgbot.send_message(chat_id, f'Flap count is {peer["flap_count"]}' ) 
+                if 'last_flap_ns' in peer:
+                    last_flap_ns = peer['last_flap_ns']
+                    # convert last_flap_ns in epoch ns to a datetime object
+                    last_flap_dt = datetime.datetime.fromtimestamp(int(last_flap_ns) / 1e9)
+                    tgbot.send_message(chat_id, f'Last flap time is {last_flap_dt}' ) 
+                return "Check completed"
+
+        # if we get here then the peer is not on the list
+        # do a connectpeer
+        tgbot.send_message(chat_id, f'{thischeck["check_item"]} is not on the local peer list' )
+        nodeinfo = lncli_command(f'getnodeinfo {thischeck["check_item"]}')
+        if nodeinfo is None:
+            # tgbot.send_message(chat_id, )
+            return f'peer {thischeck["check_item"]} is not on the graph' 
+        # print(nodeinfo)
+        # print(nodeinfo['pub_key'])
+        # print(thischeck['check_item'])
+        if nodeinfo['node']['pub_key'] == thischeck['check_item']:
+            tgbot.send_message(chat_id, f'{thischeck["check_item"]} is on the graph, trying to connect to it' )
+        
+        # see if the addresses exists
+        if nodeinfo["node"]["addresses"] is None:
+            # tgbot.send_message(chat_id, f'peer {thischeck["check_item"]} has no addresses' )
+            return f'{thischeck["check_item"]} has no addresses' 
+        for address in nodeinfo["node"]["addresses"]:
+            connect_result_json = lncli_command(f'connect {thischeck["check_item"]}@{address["addr"]}')
+            if not connect_result_json is None:
+                tgbot.send_message(chat_id, f'{thischeck["check_item"]} connected as  {thischeck["check_item"]}@{address["addr"]}' )
+                break
+            else:
+                return f'peer {thischeck["check_item"]} could not connect as  {thischeck["check_item"]}@{address["addr"]}'
+        # wait for up to 60 seconds
+        tgbot.send_message(chat_id, f'waiting up to 60 seconds for {thischeck["check_item"]} to get valid ping time' )
+        start_time = datetime.datetime.now()
+
+        # while until 60 seconds have passed
+        while True:
+            # if the time is now start_time plus 60 then break
+            if datetime.datetime.now() >= start_time + datetime.timedelta(seconds=60):
+                return "Connected but didn't get valid ping within 60 seconds, try checking later"
+              
+            # get the listpeer again
+            peers_json = lncli_command('listpeers')
+            # loop through peers_json
+            for peer in peers_json['peers']:
+                # tgbot.send_message(chat_id, f'checking peer:  {peer["pub_key"]}' )
+                if peer['pub_key'] == thischeck['check_item']:
+                    # found the peer in the list
+                    # check if the ping time is available
+                    if 'ping_time' in peer:
+                        # ping time is available
+                        # if the ping time is zero wait 1 seconds and continue loop
+                        if peer['ping_time'] == '0':
+                            sleep(1)
+                            break
+                        # if the ping time is not zero then return the ping time
+                        return f'Ping time is {peer["ping_time"]}' 
+            sleep(1)
+                      
+
+         
+                    
 
 
-        # if this node is on the peer list then return  the ping time and last pinged time as strings
-        #
-        return "result of checking node" 
+
+ 
     elif thischeck['check_type'] == 'channel':
         return "result of checking channel" # 
         

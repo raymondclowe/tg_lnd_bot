@@ -15,12 +15,12 @@ import os
 
 
 if os.name == 'nt':
-    lncli_commandLine = "bin\\lncli --tlscertpath C:\\Users\\raymo\\tg_lnd_bot\\certs\\tls.key --macaroonpath C:\\Users\\raymo\\tg_lnd_bot\certs\\readonly.macaroon --rpcserver 192.168.0.113:10009"
+    lncli_commandLine = "bin\\lncli --tlscertpath C:\\Users\\raymo\\tg_lnd_bot\\certs\\tls.cert --macaroonpath C:\\Users\\raymo\\tg_lnd_bot\certs\\admin.macaroon --rpcserver 192.168.0.113:10009"
 else:
     # check if it is linux and the ~/.lnd directory exists
     if os.path.isdir(os.path.expanduser("~/.lnd")):
         lncli_commandLine = "lncli "
     else:
-        lncli_commandLine = "/usr/local/bin/lncli --tlscertpath /home/rcl/tg_lnd_bot/certs/tls.key --macaroonpath /home/rcl/tg_lnd_bot/certs/readonly.macaroon"
+        lncli_commandLine = "/usr/local/bin/lncli --tlscertpath /home/rcl/tg_lnd_bot/certs/tls.cert --macaroonpath /home/rcl/tg_lnd_bot/certs/admin.macaroon"
 
 DEFAULT_CHECK_INTERVAL_SECONDS = 60
