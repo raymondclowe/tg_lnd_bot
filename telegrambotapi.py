@@ -1,6 +1,7 @@
 import requests
 import secrets
 
+from utils import log
 
 # telegram bot api class
 
@@ -25,7 +26,7 @@ class TelegramBot:
                     f.write(str(self.offset))
         # timeout defaults to 30 and has max 50
         params = {'offset': self.offset + 1, 'limit': 1, 'timeout': 50}
-        print(params)
+        log.debug(params)
         try:
             response = self.session.get(
                 self.api_url + 'getUpdates', params=params)
@@ -35,7 +36,7 @@ class TelegramBot:
             return None
         try:
             response_json = response.json()
-        except JSONDecodeError:
+        except:
             return None
         if 'result' not in response_json:
             return None
@@ -54,6 +55,8 @@ class TelegramBot:
 
     def send_message(self, chat_id, text):
         params = {'chat_id': chat_id, 'text': text}
+        log.info("sending tg message to {}: {}".format(chat_id, text))
         response = self.session.post(
             self.api_url + 'sendMessage', params=params)
+        # log.debug(response.status_code)
         return response.status_code == 200
