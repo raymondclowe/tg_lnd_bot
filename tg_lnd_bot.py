@@ -266,11 +266,11 @@ if __name__ == "__main__":
                 update_future = executor.submit(tgBot.get_next_update)
     # keyboard break exception
     except KeyboardInterrupt:
-        print("\nKeyboard break")
+        print("\nKeyboard break, wait up to 50 seconds for last poll to finish")
 
     # save memory
     memory.save_memory()
     # executor.shutdown(wait=False)
     executor.shutdown(wait=False) 
 
-log.info('done')
+log.info('Stopping')
