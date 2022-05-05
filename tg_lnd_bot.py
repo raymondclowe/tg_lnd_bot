@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # may need python3.8 for this to work
+from utils import log
 
 
 import concurrent.futures
@@ -111,7 +112,22 @@ def doTheCheck(thischeck, tgbot, chat_id):
                         return f'Ping time is {peer["ping_time"]}' 
             sleep(1)
                       
-
+    if thischeck['check_type'] == 'channel':
+        channel_info = lncli_command(f'getchaninfo {thischeck["check_item"]}')
+        if channel_info is None:
+            return f'channel {thischeck["check_item"]} is not on the graph'
+        # print(channel_info)
+        # convert the last_update time to a datetime object and then to a normal string date
+        last_update_dt = datetime.datetime.fromtimestamp(int(channel_info['last_update']) )
+        last_update_str = last_update_dt.strftime('%Y-%m-%d %H:%M:%S')
+        reply = f"Found the channel. The last update time is {last_update_str}."
+        
+        # if node 1 node1_policy and node2_policy disabled are both false then the channel is good
+        if channel_info['node1_policy']['disabled'] == False and channel_info['node2_policy']['disabled'] == False:
+            reply += f"\nThe channel is good"
+        else:
+            reply += f"\nThe channel is disabled"
+        return reply
          
                     
 
@@ -127,6 +143,7 @@ def doTheCheck(thischeck, tgbot, chat_id):
 
 # if this is __main__
 if __name__ == "__main__":
+    log.info("starting")
     # create telegram bot object
     tgBot = telegrambotapi.TelegramBot()
 
@@ -138,7 +155,7 @@ if __name__ == "__main__":
 
     spinner = spinner_generator()
 
-    print("Bot started, press Ctrl+C to exit")
+    log.info("Bot started, press Ctrl+C to exit")
     try:
         # loop continuously until keypress or break
         while True:
@@ -148,6 +165,13 @@ if __name__ == "__main__":
             print(next(spinner), end='\r')
 
             # check_channel(next(memory.nextCheck()))
+
+            if not update_future.exception() is None:
+                
+                log.warning("update_future exception: %s", update_future.exception())
+                # something has gone wrong with the update_future, just restart it
+                update_future = executor.submit(tgBot.get_next_update)
+
 
             # if there is an update
             if update_future.done():
@@ -249,4 +273,4 @@ if __name__ == "__main__":
     # executor.shutdown(wait=False)
     executor.shutdown(wait=False) 
 
-print('done')
+log.info('done')
