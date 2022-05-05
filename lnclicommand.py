@@ -39,7 +39,7 @@ if __name__ == '__main__':
     result = lncli_command(cmdstring)
 
     if result:
-        print(result)
+        print(json.dumps(result))
     else:
         print("no result")
         print()
