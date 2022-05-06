@@ -27,7 +27,7 @@ class TelegramBot:
                 with open(self.offset_filename, 'w') as f:
                     f.write(str(self.offset))
         # timeout defaults to 30 and has max 50
-        params = {'offset': self.offset + 1, 'limit': 1, 'timeout': POLLING_TIMEOUT}
+        params = {'offset': self.offset + 1, 'limit': 1}
         log.debug(params)
 
 
