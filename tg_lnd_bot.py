@@ -188,7 +188,7 @@ if __name__ == "__main__":
                 # get the update
                 update = update_future.result()
                 # if the update is a message
-                if 'message' in update:
+                if (update is not None) and ('message' in update):
                     # get the message
                     chat_id = update['message']['chat']['id']
                     first_name = update['message']['from']['first_name']
