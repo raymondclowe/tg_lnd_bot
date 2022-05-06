@@ -3,6 +3,8 @@ import secrets
 
 from utils import log
 
+POLLING_TIMEOUT = 50
+
 # telegram bot api class
 
 
@@ -25,11 +27,15 @@ class TelegramBot:
                 with open(self.offset_filename, 'w') as f:
                     f.write(str(self.offset))
         # timeout defaults to 30 and has max 50
-        params = {'offset': self.offset + 1, 'limit': 1, 'timeout': 50}
+        params = {'offset': self.offset + 1, 'limit': 1, 'timeout': POLLING_TIMEOUT}
         log.debug(params)
+
+
         try:
             response = self.session.get(
-                self.api_url + 'getUpdates', params=params)
+                self.api_url + 'getUpdates', params=params, timeout=POLLING_TIMEOUT)
+            log.debug(response.status_code)
+
         except:
             return None
         if response.status_code != 200:

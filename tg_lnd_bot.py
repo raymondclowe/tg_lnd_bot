@@ -2,7 +2,7 @@
 # may need python3.8 for this to work
 from utils import log
 
-
+import sys
 import concurrent.futures
 import datetime
 import string
@@ -24,7 +24,7 @@ def spinner_generator():
             yield c
 
 
-def doTheCheck(thischeck, tgbot, chat_id):
+def doTheInteractiveCheck(thischeck, tgbot, chat_id):
     if thischeck is None:
         return 'Nothing to check' # unchanged
 
@@ -140,6 +140,11 @@ def doTheCheck(thischeck, tgbot, chat_id):
 
     pass
 
+# define doBackgroundCheck
+def doBackgroundCheck(thischeck, tgbot):
+    # chat_id = thischeck['chat_id']
+    pass
+# xxxxxxxxxxxxxx
 
 # if this is __main__
 if __name__ == "__main__":
@@ -161,19 +166,24 @@ if __name__ == "__main__":
         while True:
             # wait one second
             sleep(1)
-            # print next spinner on the same line overlapping
+            # print next spinner on the same line overlapping and flush the buffer
+            # sys.stdout.write(next(spinner))
             print(next(spinner), end='\r')
 
             # check_channel(next(memory.nextCheck()))
+            next_check = memory.nextCheck()
 
-            if not update_future.exception() is None:
-                
-                log.warning("update_future exception: %s", update_future.exception())
-                # something has gone wrong with the update_future, just restart it
-                update_future = executor.submit(tgBot.get_next_update)
+            if not next_check is None:
+                doBackgroundCheck(next_check, tgBot)
 
+                # check the udpate_future status
 
-            # if there is an update
+            # print(update_future.running())
+            # print(update_future.cancelled())
+            # print(update_future.done())
+
+            # if there is an update then this is an incomming command, process it
+
             if update_future.done():
                 # get the update
                 update = update_future.result()
@@ -249,7 +259,7 @@ if __name__ == "__main__":
                                 memory.add_check(thischeck)
                                 reply = f"Adding {thischeck}"
                             else:
-                                reply = doTheCheck(thischeck, tgBot, chat_id)
+                                reply = doTheInteractiveCheck(thischeck, tgBot, chat_id)
                                 memory.update_check(thischeck)
                             
                              
@@ -264,6 +274,17 @@ if __name__ == "__main__":
                     tgBot.send_message(chat_id, reply)
                 tgBot.save_offset()
                 update_future = executor.submit(tgBot.get_next_update)
+            else:
+                if not update_future.running():
+              
+                    log.warning("update_future is not running")
+                    log.warning(" exception: %s", update_future.exception(timeout=1))
+                    # something has gone wrong with the update_future, just restart it
+                    update_future = executor.submit(tgBot.get_next_update)
+
+
+
+    
     # keyboard break exception
     except KeyboardInterrupt:
         print("\nKeyboard break, wait up to 50 seconds for last poll to finish")
