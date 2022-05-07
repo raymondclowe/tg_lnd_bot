@@ -13,8 +13,8 @@ class TelegramBot:
         self.token = secrets.TELEGRAM_BOT_TOKEN
         self.api_url = 'https://api.telegram.org/bot{}/'.format(self.token)
         self.session = requests.Session()
-        self.offset = 0
-        self.previous_offset = -1
+        self.offset = 1
+        self.previous_offset = 0
         self.offset_filename = "telegram_update_offset.txt"
         # self.get_next_update()
 

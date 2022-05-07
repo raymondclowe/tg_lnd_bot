@@ -30,6 +30,17 @@ def doTheInteractiveCheck(thischeck, tgbot, chat_id):
 
     # tgbot.send_message(chat_id, 'checking ...')
 
+    # create a history dictonary    
+    history = {}
+    history['datetime'] = datetime.datetime.now().isoformat()
+    history['result'] = ''
+
+    # if thischeck['history'] doesn't exist then create it with empty list
+    if 'history' not in thischeck:
+        thischeck['history'] = []
+
+
+
     if thischeck['check_type'] == 'node':
         # get a list of lnd peers
         # if not on the list then do a lncli connectpeer and keep waiting until the connection happens and a ping time is available, or it timesout after 1 minute
@@ -47,17 +58,22 @@ def doTheInteractiveCheck(thischeck, tgbot, chat_id):
                 tgbot.send_message(chat_id, f'node {peer["pub_key"]} is online as a peer' )
                 # found the peer in the list
                 # check if the ping time is available
+                history['result'] = "online as peer"
                 if 'ping_time' in peer:
                     # ping time is available
                     tgbot.send_message(chat_id, f'Ping time is {peer["ping_time"]}' ) 
+                    history['pingtime'] = peer["ping_time"]
                 if 'flap_count' in peer:
                     # 
                     tgbot.send_message(chat_id, f'Flap count is {peer["flap_count"]}' ) 
+                    history['flapcount'] = peer["flap_count"]
                 if 'last_flap_ns' in peer:
                     last_flap_ns = peer['last_flap_ns']
                     # convert last_flap_ns in epoch ns to a datetime object
                     last_flap_dt = datetime.datetime.fromtimestamp(int(last_flap_ns) / 1e9)
+                    history['flap_time'] = last_flap_dt.isoformat()
                     tgbot.send_message(chat_id, f'Last flap time is {last_flap_dt}' ) 
+                thischeck['history'].append(history)
                 return "Check completed"
 
         # if we get here then the peer is not on the list
@@ -129,16 +145,8 @@ def doTheInteractiveCheck(thischeck, tgbot, chat_id):
             reply += f"\nThe channel is disabled"
         return reply
          
-                    
 
-
-
- 
-    elif thischeck['check_type'] == 'channel':
-        return "result of checking channel" # 
-        
-
-    pass
+    return None
 
 # define doBackgroundCheck
 def doBackgroundCheck(thischeck, tgbot):
