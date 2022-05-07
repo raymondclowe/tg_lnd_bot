@@ -289,6 +289,7 @@ if __name__ == "__main__":
                                 memory.add_check(thischeck)
                                 reply = f"Adding {thischeck}"
                             else:
+                                thischeck['history'] = memory.loadhistory(thischeck)
                                 reply = doTheInteractiveCheck(thischeck, tgBot, chat_id)
                                 memory.update_check(thischeck)
                             
