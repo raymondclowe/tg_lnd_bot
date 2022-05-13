@@ -26,8 +26,27 @@ class memoryClass:
             f.write(json.dumps(self.data, indent=4,sort_keys=True, default=str))
 
     def add_check(self, check):
-        self.data['checks'].append(check)
-        self.save_memory()
+        # if does not already exist based on check type, check item and chat id then append
+        found = False
+        for i in range(len(self.data['checks'])):
+            if self.data['checks'][i]['check_type'] == check['check_type'] and self.data['checks'][i]['check_item'] == check['check_item'] and self.data['checks'][i]['chat_id'] == check['chat_id']:
+                found = True
+                break
+        if not found:
+            self.data['checks'].append(check)
+            self.save_memory()
+
+    def loadhistory(self, check):
+        for i in range(len(self.data['checks'])):
+            if self.data['checks'][i]['check_type'] == check['check_type'] and self.data['checks'][i]['check_item'] == check['check_item'] and self.data['checks'][i]['chat_id'] == check['chat_id']:
+                # if history exists return it otherwise return empty list
+                if self.data['checks'][i]['history']:
+                    return self.data['checks'][i]['history']
+                else:
+                    return []
+                # return self.data['checks'][i].history
+        
+        return []
    
     def update_check(self, check):
        # loop through all the self.data['checks'] and find one with a matching check_type, check_item and chat_id

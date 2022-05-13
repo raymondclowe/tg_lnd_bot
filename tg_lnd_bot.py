@@ -30,6 +30,17 @@ def doTheInteractiveCheck(thischeck, tgbot, chat_id):
 
     # tgbot.send_message(chat_id, 'checking ...')
 
+    # create a history dictonary    
+    history = {}
+    history['datetime'] = datetime.datetime.now().isoformat()
+    history['result'] = ''
+
+    # if thischeck['history'] doesn't exist then create it with empty list
+    if 'history' not in thischeck:
+        thischeck['history'] = []
+
+
+
     if thischeck['check_type'] == 'node':
         # get a list of lnd peers
         # if not on the list then do a lncli connectpeer and keep waiting until the connection happens and a ping time is available, or it timesout after 1 minute
@@ -47,25 +58,33 @@ def doTheInteractiveCheck(thischeck, tgbot, chat_id):
                 tgbot.send_message(chat_id, f'node {peer["pub_key"]} is online as a peer' )
                 # found the peer in the list
                 # check if the ping time is available
+                history['result'] = "online as peer"
                 if 'ping_time' in peer:
                     # ping time is available
                     tgbot.send_message(chat_id, f'Ping time is {peer["ping_time"]}' ) 
+                    history['pingtime'] = peer["ping_time"]
                 if 'flap_count' in peer:
                     # 
                     tgbot.send_message(chat_id, f'Flap count is {peer["flap_count"]}' ) 
+                    history['flapcount'] = peer["flap_count"]
                 if 'last_flap_ns' in peer:
                     last_flap_ns = peer['last_flap_ns']
                     # convert last_flap_ns in epoch ns to a datetime object
                     last_flap_dt = datetime.datetime.fromtimestamp(int(last_flap_ns) / 1e9)
+                    history['flap_time'] = last_flap_dt.isoformat()
                     tgbot.send_message(chat_id, f'Last flap time is {last_flap_dt}' ) 
+                thischeck['history'].append(history)
                 return "Check completed"
 
         # if we get here then the peer is not on the list
         # do a connectpeer
         tgbot.send_message(chat_id, f'{thischeck["check_item"]} is not on the local peer list' )
+        history['result'] = "not on list"
         nodeinfo = lncli_command(f'getnodeinfo {thischeck["check_item"]}')
         if nodeinfo is None:
             # tgbot.send_message(chat_id, )
+            history['result'] = "not on graph"
+            thischeck['history'].append(history)
             return f'peer {thischeck["check_item"]} is not on the graph' 
         # print(nodeinfo)
         # print(nodeinfo['pub_key'])
@@ -76,13 +95,21 @@ def doTheInteractiveCheck(thischeck, tgbot, chat_id):
         # see if the addresses exists
         if nodeinfo["node"]["addresses"] is None:
             # tgbot.send_message(chat_id, f'peer {thischeck["check_item"]} has no addresses' )
-            return f'{thischeck["check_item"]} has no addresses' 
+            history['result'] = "no addresses"
+            thischeck['history'].append(history)
+            return f'{thischeck["check_item"]} has no addresses'
+        history['addresses_available'] = nodeinfo["node"]["addresses"] 
         for address in nodeinfo["node"]["addresses"]:
+            
             connect_result_json = lncli_command(f'connect {thischeck["check_item"]}@{address["addr"]}')
             if not connect_result_json is None:
+                history['result'] = "connected"
+                history['address_connected'] = address["addr"]
                 tgbot.send_message(chat_id, f'{thischeck["check_item"]} connected as  {thischeck["check_item"]}@{address["addr"]}' )
                 break
             else:
+                history['result'] = "could not connect"
+                thischeck['history'].append(history)
                 return f'peer {thischeck["check_item"]} could not connect as  {thischeck["check_item"]}@{address["addr"]}'
         # wait for up to 60 seconds
         tgbot.send_message(chat_id, f'waiting up to 60 seconds for {thischeck["check_item"]} to get valid ping time' )
@@ -92,6 +119,8 @@ def doTheInteractiveCheck(thischeck, tgbot, chat_id):
         while True:
             # if the time is now start_time plus 60 then break
             if datetime.datetime.now() >= start_time + datetime.timedelta(seconds=60):
+                history['result'] = "connected but timeout trying to get ping time"
+                thischeck['history'].append(history)
                 return "Connected but didn't get valid ping within 60 seconds, try checking later"
               
             # get the listpeer again
@@ -102,6 +131,7 @@ def doTheInteractiveCheck(thischeck, tgbot, chat_id):
                 if peer['pub_key'] == thischeck['check_item']:
                     # found the peer in the list
                     # check if the ping time is available
+                    history['result'] = "online as peer after connecting"
                     if 'ping_time' in peer:
                         # ping time is available
                         # if the ping time is zero wait 1 seconds and continue loop
@@ -109,36 +139,36 @@ def doTheInteractiveCheck(thischeck, tgbot, chat_id):
                             sleep(1)
                             break
                         # if the ping time is not zero then return the ping time
+                        history['pingtime'] = peer["ping_time"]
+                        thischeck['history'].append(history)
                         return f'Ping time is {peer["ping_time"]}' 
             sleep(1)
                       
     if thischeck['check_type'] == 'channel':
         channel_info = lncli_command(f'getchaninfo {thischeck["check_item"]}')
         if channel_info is None:
+            history['result'] = "not on graph"
+            thischeck['history'].append(history)
             return f'channel {thischeck["check_item"]} is not on the graph'
         # print(channel_info)
         # convert the last_update time to a datetime object and then to a normal string date
         last_update_dt = datetime.datetime.fromtimestamp(int(channel_info['last_update']) )
         last_update_str = last_update_dt.strftime('%Y-%m-%d %H:%M:%S')
+        history['last_update'] = f"online : {last_update_str}"
         reply = f"Found the channel. The last update time is {last_update_str}."
         
         # if node 1 node1_policy and node2_policy disabled are both false then the channel is good
         if channel_info['node1_policy']['disabled'] == False and channel_info['node2_policy']['disabled'] == False:
+            history['result'] = "channel is good"
             reply += f"\nThe channel is good"
         else:
+            history['result'] = "channel is not good"
             reply += f"\nThe channel is disabled"
+        thischeck['history'].append(history)
         return reply
          
-                    
 
-
-
- 
-    elif thischeck['check_type'] == 'channel':
-        return "result of checking channel" # 
-        
-
-    pass
+    return None
 
 # define doBackgroundCheck
 def doBackgroundCheck(thischeck, tgbot):
@@ -259,6 +289,7 @@ if __name__ == "__main__":
                                 memory.add_check(thischeck)
                                 reply = f"Adding {thischeck}"
                             else:
+                                thischeck['history'] = memory.loadhistory(thischeck)
                                 reply = doTheInteractiveCheck(thischeck, tgBot, chat_id)
                                 memory.update_check(thischeck)
                             
