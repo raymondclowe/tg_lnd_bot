@@ -1,0 +1,16 @@
+[Unit]
+Description=tg_lnd_bot service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/bin/bash /home/rcl/tg_lnd_bot/run.sh
+Restart=always
+RestartSec=5
+TimeoutSec=60
+RuntimeMaxSec=infinity
+PIDFile=/tmp/tg_lnd_bot.pid
+User=bitcoin
+
+[Install]
+WantedBy=multi-user.target
