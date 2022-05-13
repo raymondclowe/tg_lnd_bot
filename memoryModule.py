@@ -39,11 +39,12 @@ class memoryClass:
     def loadhistory(self, check):
         for i in range(len(self.data['checks'])):
             if self.data['checks'][i]['check_type'] == check['check_type'] and self.data['checks'][i]['check_item'] == check['check_item'] and self.data['checks'][i]['chat_id'] == check['chat_id']:
-                # if history exists return it otherwise return empty list
-                if self.data['checks'][i]['history']:
-                    return self.data['checks'][i]['history']
-                else:
-                    return []
+                # if history exists return it otherwise create an empty empty list and return it
+                try:
+                    return self.data['checks'][i]['history']                    
+                except:
+                    self.data['checks'][i]['history']  = []
+                    return self.data['checks'][i]['history'] 
                 # return self.data['checks'][i].history
         
         return []
