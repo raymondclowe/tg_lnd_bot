@@ -1,5 +1,6 @@
 import subprocess
 import sys
+from time import sleep
 
 def runcmd(cmd, verbose = False, *args, **kwargs):
     ## run a command and return the output
@@ -10,8 +11,11 @@ def runcmd(cmd, verbose = False, *args, **kwargs):
         stdout = subprocess.PIPE,
         stderr = subprocess.PIPE,
         text = True,
-        shell = True
+        shell = True,
+        encoding="utf-8" # maybe maybe not,
+        # universal_newlines=True # seems recommended
     )
+    sleep(1)
     std_out, std_err = process.communicate()
     errorlevel = process.returncode
     if verbose:
