@@ -320,6 +320,48 @@ def doBackgroundCheck(thischeck, tgbot):
     return None
 
 
+def command_validator(text):
+    # returns either None, error message if it is invalid or true, list of the words
+
+    # if the first character is not a '/' then ignore this
+    if text[0] != '/':
+        return False, "Command must start with a '/'"
+
+    # strip off the initial character
+    text = text[1:]
+
+    words = text.split()
+
+    if words[0] not in ['monitor', 'check', 'pause', 'resume', 'list', 'help']:
+        return False, f"Command must be one of: monitor, check, pause, resume, list, help"
+    
+    if words[0] in ['help', 'list']:
+        return True, words
+
+    # what's left is 'monitor', 'check', 'pause', 'resume' which all take second word 'channel' or 'node'
+    if words[1] not in ['channel', 'node']:
+        return False, f"Second word must be either 'channel' or 'node'"
+
+    # if channel then the next word is the channel id
+    if words[1] == 'channel':
+        if len(words) != 3:
+            return False, f"If second word is 'channel' then the third word must be the channel id"
+        if not words[2].isdigit():
+            return False, f"Channel id must be a number"
+        return True, words
+  
+  
+    # node is 66 characters hex
+    if words[1] == 'node':
+        if len(words) != 3:
+            return False, f"If second word is 'node' then the third word must be the 66 character hex node  id"
+        if len(words[2]) != 66:
+            if not all(c in string.hexdigits for c in words[2]):
+                return False, f"Node id must be 66 characters hex"
+                    # validcommand = False
+    return False, "Fell through"
+
+
 # if this is __main__
 if __name__ == "__main__":
     log.info("starting")
