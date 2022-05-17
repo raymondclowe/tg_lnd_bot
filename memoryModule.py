@@ -62,6 +62,15 @@ class memoryClass:
         if not found:
             self.data['checks'].append(check)
         self.save_memory()
+
+    def get_check(self, check_type, check_item, chat_id):
+        # found = False
+        for i in range(len(self.data['checks'])):
+            if self.data['checks'][i]['check_type'] == check['check_type'] and self.data['checks'][i]['check_item'] == check['check_item'] and self.data['checks'][i]['chat_id'] == check['chat_id']:
+                return self.data['checks'][i]
+                # found = True
+                break
+        return None
     
     # define a generator that 
     def nextCheck(self):

@@ -186,6 +186,10 @@ def doBackgroundCheck(thischeck, tgbot):
     if thischeck is None:
         return
 
+    # if it paused then don't check
+    if thischeck['paused']:
+        return
+
     if ('next_check_due' in thischeck):        
         next_check_due_isostr = thischeck['next_check_due']
         next_check_due_dt = datetime.datetime.strptime(next_check_due_isostr, '%Y-%m-%dT%H:%M:%S.%f')
@@ -386,13 +390,14 @@ if __name__ == "__main__":
 
                     words = text.split()
 
-                    if words[0] in ['monitor', 'check']:
+                    if words[0] in ['monitor', 'check', 'pause', 'resume', 'help']:
 
                         # check if the command is valid
                         validcommand = True
 
-                        # if it is not 3 words then not valid
-                        if len(words) != 3:
+                        if words[0] == 'help':
+                            tgBot.send_message(chat_id, help_message)
+                        elif len(words) != 3:
                             validcommand = False
 
                         # if second word not node or channel then not valid
@@ -420,8 +425,27 @@ if __name__ == "__main__":
                             check_type = words[1]
                             check_item = words[2]
 
-                            # construct a check object which is a dictionary
+                            if command_type == 'pause':
+                                # find if the check already exists
+                                loaded_check = memory.get_check(check_type, check_item, chat_id)
+                                if loaded_check is None:
+                                    reply = f"{check_item} is not being monitored"
+                                else:
+                                    loaded_check['paused'] = True
+                                    reply = f"{check_item} is now paused"
+                                    memory.update_check(loaded_check)
 
+                            elif command_type == 'resume':
+                                # find if the check already exists
+                                loaded_check = memory.get_check(check_type, check_item, chat_id)
+                                if loaded_check is None:
+                                    reply = f"{check_item} is not being monitored"
+                                else:
+                                    loaded_check['paused'] = False
+                                    reply = f"{check_item} is now resumed"
+                                    memory.update_check(loaded_check)
+
+                            # construct a check object which is a dictionary
                             thischeck = {'check_type': check_type,
                                          'check_item': check_item,
                                          'chat_id': chat_id,
