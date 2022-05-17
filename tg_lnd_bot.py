@@ -187,20 +187,27 @@ def doBackgroundCheck(thischeck, tgbot):
         return
 
     # if it paused then don't check
-    if thischeck['paused']:
+    if 'paused' in thischeck and thischeck['paused']:
         return
 
     if ('next_check_due' in thischeck):        
         next_check_due_isostr = thischeck['next_check_due']
-        next_check_due_dt = datetime.datetime.strptime(next_check_due_isostr, '%Y-%m-%dT%H:%M:%S.%f')
+        # if ext_check_due_isostr contains a T then set the format string to '%Y-%m-%dT%H:%M:%S.%f'
+        if 'T' in next_check_due_isostr:
+            next_check_due_format = '%Y-%m-%dT%H:%M:%S'
+        else:
+            next_check_due_format = '%Y-%m-%d %H:%M:%S'
+        if '.' in next_check_due_isostr:
+            next_check_due_format += '.%f'
+        next_check_due_dt = datetime.datetime.strptime(next_check_due_isostr, next_check_due_format)
 
-        if datetime.datetime.now() < next_check_due_dt:
-            return
-    log.debug(f"doBackgroundCheck: {thischeck}")
+    if datetime.datetime.now() < next_check_due_dt:
+        return
+    log.info(f"doBackgroundCheck: {thischeck['next_check_due']} {thischeck['check_type']} {thischeck['check_item']}")
     # create a next_check_due that is the iso format of now plus DEFAULT_CHECK_INTERVAL_SECOND
     thischeck['next_check_due'] = (datetime.datetime.now() + datetime.timedelta(seconds=config.DEFAULT_CHECK_INTERVAL_SECONDS)).isoformat()
 
-    # create a history dictonary that will save the result of this text
+    # create a history dictonary that will save the result of this test
     history = {}
     history['datetime'] = datetime.datetime.now().isoformat()
     history['result'] = ''
@@ -275,7 +282,7 @@ def doBackgroundCheck(thischeck, tgbot):
 
             connect_result_json = lncli_command(
                 f'connect {thischeck["check_item"]}@{address["addr"]}')
-            if not connect_result_json is None:
+            if connect_result_json is not None:
                 history['result'] = "connected"
                 history['address_connected'] = address["addr"]
                 # tgbot.send_message(chat_id, f'{thischeck["check_item"]} connected as  {thischeck["check_item"]}@{address["addr"]}' )
@@ -283,6 +290,12 @@ def doBackgroundCheck(thischeck, tgbot):
                 thischeck['next_check'] = (datetime.datetime.now(
                 ) + datetime.timedelta(minutes=2)).isoformat()
                 thischeck['history'].append(history)
+                return
+            else:
+                history['result'] = "not connected: failed to connect"
+                thischeck['history'].append(history)
+                tgbot.send_message(
+                    chat_id, f'{thischeck["check_item"]} could not connect')
                 return
 
         history['result'] = f'could not connect to any of {len(nodeinfo["node"]["addresses"])} address(es)'
@@ -311,7 +324,7 @@ def doBackgroundCheck(thischeck, tgbot):
             # reply += f"\nThe channel is good"
         else:
             history['result'] = "channel is not good"
-            reply += f"\nThe channel is disabled"
+            reply = f"\nThe channel is disabled"
             tgbot.send_message(
                 chat_id, f' {thischeck["check_item"]} is not good; one or both sides are disabled')
         thischeck['history'].append(history)
@@ -379,6 +392,8 @@ if __name__ == "__main__":
     spinner = spinner_generator()
 
     log.info("Bot started, press Ctrl+C to exit")
+
+    nextCheckGenerator = memory.nextCheck()
     try:
         # loop continuously until keypress or break
         while True:
@@ -387,9 +402,9 @@ if __name__ == "__main__":
             # print next spinner on the same line overlapping and flush the buffer
             # sys.stdout.write(next(spinner))
             print(next(spinner), end='\r')
-
+            reply = ""
             # check_channel(next(memory.nextCheck()))
-            next_check = next(memory.nextCheck())
+            next_check = next(nextCheckGenerator)
 
             if not next_check is None:
                 doBackgroundCheck(next_check, tgBot)
@@ -432,30 +447,32 @@ if __name__ == "__main__":
 
                     words = text.split()
 
-                    if words[0] in ['monitor', 'check', 'pause', 'resume', 'help']:
+                    if words[0] in ['monitor', 'check', 'pause', 'resume', 'list', 'help']:
 
                         # check if the command is valid
                         validcommand = True
 
-                        if words[0] == 'help':
-                            tgBot.send_message(chat_id, help_message)
-                        elif len(words) != 3:
+                        # list or help must have 1 word
+                        if (words[0] in ['list', 'help'] ) and (len(words) != 1):
                             validcommand = False
-
-                        # if second word not node or channel then not valid
-                        elif words[1] not in ['node', 'channel']:
+                        # monitor check pause or resume must have three words
+                        elif ((words[0] in ['monitor', 'check', 'pause', 'resume'] ) and 
+                            (len(words) != 3)):
                             validcommand = False
-
-                        # if second word node then check that third word is 66 characters hex
-                        elif words[1] == 'node':
-                            if len(words[2]) != 66:
-                                if not all(c in string.hexdigits for c in words[2]):
-                                    validcommand = False
-
-                        # if the second word is channel then check that third word is a number
-                        elif words[1] == 'channel':
-                            if not words[2].isdigit():
+                            # if second word not node or channel then not valid
+                            if words[1] not in ['node', 'channel']:
                                 validcommand = False
+                            else:
+                        # if second word node then check that third word is 66 characters hex
+                                if words[1] == 'node':
+                                    if len(words[2]) != 66:
+                                        if not all(c in string.hexdigits for c in words[2]):
+                                            validcommand = False
+
+                                # if the second word is channel then check that third word is a number
+                                if words[1] == 'channel':
+                                    if not words[2].isdigit():
+                                        validcommand = False
 
                         if not validcommand:
                             reply = f"Invalid command: {text}"
@@ -464,8 +481,24 @@ if __name__ == "__main__":
                             # at this point we should have a valid command so we can process it
 
                             command_type = words[0]
-                            check_type = words[1]
-                            check_item = words[2]
+
+                            if command_type == 'list':
+                                reply = f"List of all your channels and nodes\n"
+                                your_checks = memory.get_checks_by_chat_id(chat_id)
+                                for check in your_checks:
+                                    reply += f"{check['check_type']} -> {check['check_item']} "
+                                    if 'alias' in check:
+                                        reply += f" ({check['alias']})"
+                                    if 'paused' in check:
+                                        reply += f" [paused]"
+                                    reply += "\n"
+                                
+                            if command_type in ['monitor', 'check', 'pause', 'resume']:
+                                check_type = words[1]
+                                check_item = words[2]
+                            else:
+                                check_type = ""
+                                check_item = ""
 
                             if command_type == 'pause':
                                 # find if the check already exists
@@ -497,7 +530,7 @@ if __name__ == "__main__":
                             if command_type == 'monitor':
                                 memory.add_check(thischeck)
                                 reply = f"Adding {thischeck}"
-                            else:
+                            if command_type == 'check':
                                 thischeck['history'] = memory.loadhistory(
                                     thischeck)
                                 reply = doTheInteractiveCheck(
@@ -511,7 +544,8 @@ if __name__ == "__main__":
                                 'You can also ask me to /check <node|channel> <id> to see the current status.'
                     else:
                         reply = 'I do not understand you. Try /help for help.'
-                    tgBot.send_message(chat_id, reply)
+                    if reply:
+                        tgBot.send_message(chat_id, reply)
                 tgBot.save_offset()
                 update_future = executor.submit(tgBot.get_next_update)
             else:
