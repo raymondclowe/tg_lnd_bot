@@ -1,6 +1,8 @@
 # despatch and process commands
 # 'start', 'monitor', 'check', 'pause', 'resume', 'list', 'help'
 import string
+from utils import log
+
 
 from lnclicommand import lncli_command
 
@@ -8,6 +10,7 @@ import datetime
 
 
 def interactive_check(thischeck, tgbot, chat_id):
+    log.debug(f"interactive_check {thischeck}")
     if thischeck is None:
         return 'Nothing to check'  # unchanged
 
@@ -265,7 +268,7 @@ def doCommand_resume(command, chat_id, memory):
 
 
 def command_despatcher(command, chat_id, first_name, username, memory, tg_bot):
-
+    log.debug(f"command_despatcher: {command}")
     # if command starts with /start
     if command.startswith('/start'):
         return f'Hello {first_name}(@{username})! I am a lightning network monitor bot. Say /help for help'
@@ -277,7 +280,7 @@ def command_despatcher(command, chat_id, first_name, username, memory, tg_bot):
 
     elif command.startswith('/monitor '):
         # call the monitor function
-        return doCommand_monitor(command, chat_id, first_name, username, memory)
+        return doCommand_monitor(command, chat_id,  memory)
 
     elif command.startswith('/list'):
         # call the list function

@@ -49,10 +49,11 @@ def doBackgroundCheck(thischeck, tgbot):
         next_check_due_dt = datetime.datetime.strptime(
             next_check_due_isostr, next_check_due_format)
 
-    if datetime.datetime.now() < next_check_due_dt:
-        return
-    log.info(
-        f"doBackgroundCheck: {thischeck['next_check_due']} {thischeck['check_type']} {thischeck['check_item']}")
+        if datetime.datetime.now() < next_check_due_dt:
+            return
+        log.info(
+            f"doBackgroundCheck: {thischeck['next_check_due']} {thischeck['check_type']} {thischeck['check_item']}")
+    # if there is no next_check_due then it should be considered due now
     # create a next_check_due that is the iso format of now plus DEFAULT_CHECK_INTERVAL_SECOND
     thischeck['next_check_due'] = (datetime.datetime.now(
     ) + datetime.timedelta(seconds=config.DEFAULT_CHECK_INTERVAL_SECONDS)).isoformat()
@@ -246,6 +247,7 @@ if __name__ == "__main__":
     try:
         # loop continuously until keypress or break
         while True:
+            log.debug("checking for next update")
             # wait one second
             sleep(1)
             # print next spinner on the same line overlapping and flush the buffer
@@ -256,16 +258,21 @@ if __name__ == "__main__":
             next_check = next(listOfChecks)
 
             if next_check is not None:
+                log.debug(f"checking {next_check['check_item']}")
                 doBackgroundCheck(next_check, tg_bot)
                 memory.update_check(next_check)
+            else:
+                log.debug("no more checks to do")
 
             # if there is an update then this is an incomming command, process it
 
             if telegram_update_future.done():
+                log.debug("telegram update is done")
                 # get the update
                 telegram_update = telegram_update_future.result()
                 # if the update is a message
                 if (telegram_update is not None) and ('message' in telegram_update):
+                    log.debug("telegram update is a message")
                     # get the message
                     chat_id = telegram_update['message']['chat']['id']
                     first_name = telegram_update['message']['from']['first_name']
@@ -289,6 +296,7 @@ if __name__ == "__main__":
                 tg_bot.save_offset()
                 telegram_update_future = executor.submit(tg_bot.get_next_update)
             else:
+                log.debug("telegram update is not done")
                 if not telegram_update_future.running():
 
                     log.warning("update_future is not running")

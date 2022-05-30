@@ -2,6 +2,8 @@ import json
 
 import datetime
 
+from utils import log
+
 
 # define the memory class
 class memoryClass:
@@ -21,6 +23,7 @@ class memoryClass:
             pass
 
     def save_memory_to_disk(self):
+        log.debug("Saving memory to disk")
         with open(self.memory_filename, 'w') as f:
             f.write(json.dumps(self.data, indent=4, sort_keys=True, default=str))
 
@@ -82,12 +85,13 @@ class memoryClass:
 
     # define a generator that
     def nextCheck_generator(self):
-        if 'checks' in self.data:
-            while True:
+        while True:
+            if (('checks' in self.data) and
+                (len(self.data['checks']) > 0)):
                 for check in self.data['checks']:
                     yield check
-        else:
-            yield None
+            else:
+                yield None
 
     # def delete_channel_by_id(self, channelid):
     #     # delete channels for this time or before
