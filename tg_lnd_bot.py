@@ -37,7 +37,7 @@ def doBackgroundCheck(thischeck, tgbot):
     if 'paused' in thischeck and thischeck['paused']:
         return
 
-    if ('next_check_due' in thischeck):        
+    if ('next_check_due' in thischeck):
         next_check_due_isostr = thischeck['next_check_due']
         # if ext_check_due_isostr contains a T then set the format string to '%Y-%m-%dT%H:%M:%S.%f'
         if 'T' in next_check_due_isostr:
@@ -46,13 +46,16 @@ def doBackgroundCheck(thischeck, tgbot):
             next_check_due_format = '%Y-%m-%d %H:%M:%S'
         if '.' in next_check_due_isostr:
             next_check_due_format += '.%f'
-        next_check_due_dt = datetime.datetime.strptime(next_check_due_isostr, next_check_due_format)
+        next_check_due_dt = datetime.datetime.strptime(
+            next_check_due_isostr, next_check_due_format)
 
     if datetime.datetime.now() < next_check_due_dt:
         return
-    log.info(f"doBackgroundCheck: {thischeck['next_check_due']} {thischeck['check_type']} {thischeck['check_item']}")
+    log.info(
+        f"doBackgroundCheck: {thischeck['next_check_due']} {thischeck['check_type']} {thischeck['check_item']}")
     # create a next_check_due that is the iso format of now plus DEFAULT_CHECK_INTERVAL_SECOND
-    thischeck['next_check_due'] = (datetime.datetime.now() + datetime.timedelta(seconds=config.DEFAULT_CHECK_INTERVAL_SECONDS)).isoformat()
+    thischeck['next_check_due'] = (datetime.datetime.now(
+    ) + datetime.timedelta(seconds=config.DEFAULT_CHECK_INTERVAL_SECONDS)).isoformat()
 
     # create a history dictonary that will save the result of this test
     history = {}
@@ -180,7 +183,7 @@ def doBackgroundCheck(thischeck, tgbot):
     return None
 
 
-def command_validator(text): ## unused
+def command_validator(text):  # unused
     # returns either None, error message if it is invalid or true, list of the words
 
     # if the first character is not a '/' then ignore this
@@ -194,7 +197,7 @@ def command_validator(text): ## unused
 
     if words[0] not in ['monitor', 'check', 'pause', 'resume', 'list', 'help']:
         return False, f"Command must be one of: monitor, check, pause, resume, list, help"
-    
+
     if words[0] in ['help', 'list']:
         return True, words
 
@@ -209,8 +212,7 @@ def command_validator(text): ## unused
         if not words[2].isdigit():
             return False, f"Channel id must be a number"
         return True, words
-  
-  
+
     # node is 66 characters hex
     if words[1] == 'node':
         if len(words) != 3:
@@ -218,7 +220,7 @@ def command_validator(text): ## unused
         if len(words[2]) != 66:
             if not all(c in string.hexdigits for c in words[2]):
                 return False, f"Node id must be 66 characters hex"
-                    # validcommand = False
+                # validcommand = False
     return False, "Fell through"
 
 
@@ -232,15 +234,15 @@ if __name__ == "__main__":
 
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
 
-    update_future = executor.submit(tg_bot.get_next_update)
+    telegram_update_future = executor.submit(tg_bot.get_next_update)
 
-    interactive_checking_thread_futures = []
+    # interactive_checking_thread_futures = []
 
     spinner = spinner_generator()
 
     log.info("Bot started, press Ctrl+C to exit")
 
-    nextCheckGenerator = memory.nextCheck()
+    listOfChecks = memory.nextCheck_generator()
     try:
         # loop continuously until keypress or break
         while True:
@@ -251,49 +253,49 @@ if __name__ == "__main__":
             print(next(spinner), end='\r')
             reply = ""
             # check_channel(next(memory.nextCheck()))
-            next_check = next(nextCheckGenerator)
+            next_check = next(listOfChecks)
 
-            if not next_check is None:
+            if next_check is not None:
                 doBackgroundCheck(next_check, tg_bot)
                 memory.update_check(next_check)
 
-
             # if there is an update then this is an incomming command, process it
 
-            if update_future.done():
+            if telegram_update_future.done():
                 # get the update
-                update = update_future.result()
+                telegram_update = telegram_update_future.result()
                 # if the update is a message
-                if (update is not None) and ('message' in update):
+                if (telegram_update is not None) and ('message' in telegram_update):
                     # get the message
-                    chat_id = update['message']['chat']['id']
-                    first_name = update['message']['from']['first_name']
+                    chat_id = telegram_update['message']['chat']['id']
+                    first_name = telegram_update['message']['from']['first_name']
                     try:
-                        username = update['message']['from']['username']
+                        username = telegram_update['message']['from']['username']
                     except KeyError:
                         username = first_name
                     try:
-                        text = update['message']['text'].lower()
+                        text = telegram_update['message']['text'].lower()
                     except KeyError:
                         text = ""
 
                     # if the message is a command
                     if text[0] == '/':
-                        reply = command_despatcher(text, chat_id, first_name, username, memory, tg_bot)
+                        reply = command_despatcher(
+                            text, chat_id, first_name, username, memory, tg_bot)
                     else:
                         reply = "Command must start with a '/'"
                     if reply:
                         tg_bot.send_message(chat_id, reply)
                 tg_bot.save_offset()
-                update_future = executor.submit(tg_bot.get_next_update)
+                telegram_update_future = executor.submit(tg_bot.get_next_update)
             else:
-                if not update_future.running():
+                if not telegram_update_future.running():
 
                     log.warning("update_future is not running")
                     log.warning(" exception: %s",
-                                update_future.exception(timeout=1))
+                                telegram_update_future.exception(timeout=1))
                     # something has gone wrong with the update_future, just restart it
-                    update_future = executor.submit(tg_bot.get_next_update)
+                    telegram_update_future = executor.submit(tg_bot.get_next_update)
 
     # keyboard break exception
     except KeyboardInterrupt:
@@ -302,11 +304,8 @@ if __name__ == "__main__":
     except Exception as e:
         log.exception(e)
         raise
-    
 
-    # save memory
-    memory.save_memory()
-    # executor.shutdown(wait=False)
+    memory.save_memory_to_disk()
     executor.shutdown(wait=False)
 
 log.info('Stopping')

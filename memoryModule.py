@@ -20,7 +20,7 @@ class memoryClass:
         except:
             pass
 
-    def save_memory(self):
+    def save_memory_to_disk(self):
         with open(self.memory_filename, 'w') as f:
             f.write(json.dumps(self.data, indent=4, sort_keys=True, default=str))
 
@@ -33,7 +33,7 @@ class memoryClass:
                 break
         if not found:
             self.data['checks'].append(check)
-            self.save_memory()
+            self.save_memory_to_disk()
 
     def loadhistory(self, check):
         for i in range(len(self.data['checks'])):
@@ -60,7 +60,7 @@ class memoryClass:
                 break
         if not found:
             self.data['checks'].append(check)
-        self.save_memory()
+        self.save_memory_to_disk()
 
     def get_checks_by_chat_id(self, chat_id):
         checks = []
@@ -81,7 +81,7 @@ class memoryClass:
         return None
 
     # define a generator that
-    def nextCheck(self):
+    def nextCheck_generator(self):
         if 'checks' in self.data:
             while True:
                 for check in self.data['checks']:
